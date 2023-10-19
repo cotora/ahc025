@@ -158,15 +158,8 @@ void printYesOrNo(bool x){
     cout<<(x ? "Yes" : "No")<<endl;
 }
 
-struct Item{
 
-};
-
-double eval(){
-
-}
-
-uint64_t get_rand_range( int min_val, int max_val ) {
+int64_t get_rand_range( int min_val, int max_val ) {
     // 乱数生成器
     static mt19937_64 mt64(0);
 
@@ -177,57 +170,175 @@ uint64_t get_rand_range( int min_val, int max_val ) {
     return get_rand_uni_int(mt64);
 }
 
+struct Items{
+    vi a;
+    int id;
+
+    Items(int id=0){
+        id=id;
+    }
+
+    void add_item(int x){
+        a.push_back(x);
+    }
+
+    bool send_random_item(Items &b){
+        if(size()<=1)return false;
+        int delete_num=get_rand_range(0,size()-1);
+        int mitem=a[delete_num];
+        a.erase(a.begin()+delete_num);
+        b.add_item(mitem);
+        return true;
+    }
+
+    bool send_back_item(Items &b){
+        if(size()<=1)return false;
+        int mitem=a[size()-1];
+        a.pop_back();
+        b.add_item(mitem);
+        return true;
+    }
+
+    int size(){
+        return (int)a.size();
+    }
+
+    void show_items(){
+        cout<<"# : ";
+        for(auto v : a){
+            cout<<v<<" ";
+        }
+        cout<<endl;
+        cout<<flush;
+    }
+};
+
+int qcnt=0;
+int N,D,Q;
+vector<Items> ss;
+
+char send_query(Items l,Items r){
+    //cout<<"# "<<l.id<<" "<<r.id<<endl;
+    if(l.id==r.id || l.size()==0 || r.size()==0)return '=';
+    if(qcnt>=Q)return 'n';
+    char res;
+    cout<<l.size()<<" "<<r.size()<<" ";
+    for(auto lv : l.a){
+        cout<<lv<<" ";
+    }
+    for(auto rv : r.a){
+        cout<<rv<<" ";
+    }
+    cout<<endl;
+    cout<<flush;
+    cin>>res;
+    qcnt++;
+    return res;
+}
+
+int get_score(int a){
+    int t=max(1,D/3);
+    vb seen(D,false);
+    int s=0;
+    int lcnt=0;
+    int rcnt=1;
+    for(int i=0;i<t;i++){
+        int ind=get_rand_range(0,D-1);
+        while(seen[ind]){
+            ind=get_rand_range(0,D-1);
+        }
+        char res=send_query(ss[a],ss[ind]);
+        if(res=='=')s-=1;
+        else if(res=='<')lcnt++;
+        else{
+            rcnt++;
+        }
+    }
+    s+=abs(lcnt-rcnt);
+    return s;
+}
+
 int main(void){
     ios::sync_with_stdio(false);
     cin.tie(nullptr);
     cout<<fixed<<setprecision(15);
-    int N,D,Q;
+    //値の入力
     cin>>N>>D>>Q;
-    //ランダムにD個に分ける
-    vvi ss(D);
-    for(int i=0;i<N;i++){
-        ss[i%D].push_back(i);
+    ss.resize(D);
+    for(int i=0;i<D;i++){
+        ss[i].id=i;
     }
-    vi ans(N);
-    set<pair<int,int>> equalSet;
-    while(Q--){
+    //ランダムにD個に分ける
+    for(int i=0;i<N;i++){
+        ss[i%D].add_item(i);
+    }
+    auto cmp=[](Items a,Items b){
+        cout<<"# "<<a.id<<" "<<b.id<<endl;
+        if(a.id==b.id)return false;
+        char res=send_query(a,b);
+        if(res=='<' || res=='=')return true;
+        return false;
+    };
+    sort(all(ss),cmp);
+    cout<<"# fefje"<<endl;
+    for(int i=0;i<D/2;i++){
+        int l=i;
+        int r=D-i-1;
+        if(l==r)break;
+        //cout<<"# "<<l<<" "<<r<<endl;
+        char res=send_query(ss[l],ss[r]);
+        if(res=='n')break;
+        if(res=='<'){
+            while(res=='<'){
+                if(!ss[r].send_random_item(ss[l])){
+                    break;
+                }
+                res=send_query(l,r);
+                //cout<<"# "<<res<<endl;
+            }
+            //cout<<"# fjejffje"<<endl;
+        }
+        if(qcnt>=Q)break;
+    }
+
+    while(qcnt<Q){
         int l=0;
         int r=0;
-        while(l==r || equalSet.find(make_pair(min(l,r),max(l,r)))!=equalSet.end()){
+        while(l==r){
             l=get_rand_range(0,D-1);
             r=get_rand_range(0,D-1);
+        //cout<<"# l : "<<l<<" r : "<<r<<endl;
+        //cout<<"# "<<D<<endl;
         }
-        cout<<ss[l].size()<<" "<<ss[r].size()<<" ";
-        for(auto lv : ss[l]){
-            cout<<lv<<" ";
-        }
-        for(auto rv : ss[r]){
-            cout<<rv<<" ";
-        }
-        cout<<endl;
-        cout<<flush;
-        char res;
-        cin>>res;
+        //cout<<"# l : "<<l<<" r : "<<r<<endl;
+        char res=send_query(ss[l],ss[r]);
+        //cout<<"# "<<res<<endl;
+        if(res=='n')break;
         if(res=='<'){
-            if(ss[r].size()!=1){
-                int mitem=ss[r][ss[r].size()-1];
-                ss[r].pop_back();
-                ss[l].push_back(mitem);
+            while(res=='<'){
+                if(!ss[r].send_random_item(ss[l])){
+                    break;
+                }
+                res=send_query(ss[l],ss[r]);
+                //cout<<"# "<<res<<endl;
             }
+            //cout<<"# fjejffje"<<endl;
         }
         else if(res=='>'){
-            if(ss[l].size()!=1){
-                int mitem=ss[l][ss[l].size()-1];
-                ss[l].pop_back();
-                ss[r].push_back(mitem);
+            while(res=='>'){
+                if(!ss[l].send_random_item(ss[r])){
+                    break;
+                }
+                res=send_query(ss[l],ss[r]);
+                //cout<<"# "<<res<<endl;
             }
         }
-        else{
-            equalSet.insert(make_pair(min(l,r),max(l,r)));
-        }
     }
+
+    vi ans(N);
+    //答えの作成
     for(int i=0;i<D;i++){
-        for(auto v : ss[i]){
+        for(auto v : ss[i].a){
             ans[v]=i;
         }
     }
